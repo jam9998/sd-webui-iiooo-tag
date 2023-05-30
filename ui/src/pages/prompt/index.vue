@@ -2,21 +2,23 @@
   <div class="prompt-container">
     <main>
       <div class="prompt-box-wrapper" :key="prompt.key" v-for="(prompt, index) in promptTypeList">
-        <a-textarea
-          :value="prompt.word"
-          class="prompt-textarea"
-          :data-type="prompt.key"
-          :placeholder="prompt.placeholder" 
-          allow-clear 
-          show-count
-          :bordered="false" 
-          :maxlength="promptWordMaxLength"
-          :rows="6"
-          @change="handleChangeWords($event, index)"
-          @keydown.enter.native="(e) => e.preventDefault()"
-          @keyup.enter.native="handleTranslateWords($event, index)"
-        />
-        <div style="color:#fff">{{ translateStatus.Forward }}</div>
+        <a-spin :spinning="prompt.loading">
+          <a-textarea
+            :value="prompt.word"
+            class="prompt-textarea"
+            :disabled="prompt.loading"
+            :data-type="prompt.key"
+            :placeholder="prompt.placeholder" 
+            allow-clear 
+            show-count
+            :bordered="false" 
+            :maxlength="promptWordMaxLength"
+            :rows="6"
+            @change="handleChangeWords($event, index)"
+            @keydown.enter.native="(e) => e.preventDefault()"
+            @keyup.enter.native="handleTranslateWords($event, index)"
+          />
+        </a-spin>
         <div class="operate-box">
           <div class="operate-top-inline">
             <div :key="i" v-for="(o, i) in operateList" class="operate-item">
@@ -36,38 +38,44 @@
             </div>
           </div>
           <template v-for="p in promptTypeList">
-            <DragList 
-              :key="p.key"
-              v-if="p.key === prompt.key"
-              :list="getCurrentPromptList(p.key)"
+            <a-spin 
+              :key="p.key" 
+              v-if="p.key === prompt.key" 
+              :spinning="prompt.loading"
             >
-              <template #list-body="scope">
-                <template v-if="p.key === 'Forward'">
-                  <DragPreview
-                    :key="t.id"
-                    v-for="(t, i) in scope.list.value"
-                    v-model:dragIndex="currentDragIndex"
-                    v-model:dragType="currentDragType"
-                    v-model:list="translateForwardList"
-                    :listType="p.key"
-                    :preview="t"
-                    :index="i"
-                  />
+              <DragList 
+                :key="p.key"
+                v-if="p.key === prompt.key"
+                :list="getCurrentPromptList(p.key)"
+              >
+                <template #list-body="scope">
+                  <template v-if="p.key === 'Forward'">
+                    <DragPreview
+                      :key="t.id"
+                      v-for="(t, i) in scope.list.value"
+                      v-model:dragIndex="currentDragIndex"
+                      v-model:dragType="currentDragType"
+                      v-model:list="translateForwardList"
+                      :listType="p.key"
+                      :preview="t"
+                      :index="i"
+                    />
+                  </template>
+                  <template v-else-if="p.key === 'Negative'">
+                    <DragPreview
+                      :key="t.id"
+                      v-for="(t, i) in scope.list.value"
+                      v-model:dragIndex="currentDragIndex"
+                      v-model:dragType="currentDragType"
+                      v-model:list="translateNegativeList"
+                      :listType="p.key"
+                      :preview="t"
+                      :index="i"
+                    />
+                  </template>
                 </template>
-                <template v-else-if="p.key === 'Negative'">
-                  <DragPreview
-                    :key="t.id"
-                    v-for="(t, i) in scope.list.value"
-                    v-model:dragIndex="currentDragIndex"
-                    v-model:dragType="currentDragType"
-                    v-model:list="translateNegativeList"
-                    :listType="p.key"
-                    :preview="t"
-                    :index="i"
-                  />
-                </template>
-              </template>
-            </DragList>
+              </DragList>
+            </a-spin>
           </template>
         </div>
       </div>
@@ -99,6 +107,7 @@ interface promptItemType {
   placeholder: string,
   word: string,
   syncCheck: boolean,
+  loading: boolean
 }
 interface translateType {
   id: number,
@@ -120,6 +129,7 @@ const promptTypeList: Array<promptItemType> = reactive([
     placeholder: '请输入正向提示词',
     word: '',
     syncCheck: true,
+    loading: false
   },
   {
     key: 'Negative',
@@ -127,6 +137,7 @@ const promptTypeList: Array<promptItemType> = reactive([
     placeholder: '请输入反向提示词',
     word: '',
     syncCheck: true,
+    loading: false
   }
 ]);
 const operateList = reactive([
@@ -150,6 +161,13 @@ const operateList = reactive([
     name: 'button',
     title: '排序',
     methods: 'sort'
+  },
+  {
+    name: 'select',
+    title: '质量强化模板',
+    methods: 'selectTemplate',
+    options: [],
+    value: ''
   }
 ])
 const promptWordMaxLength = ref(300);
@@ -230,6 +248,7 @@ const handleActionClick = (methods: operateMethods, type: promptType) => {
   switch (methods) {
     case 'copyByChinese':
       const res = (type === 'Forward' ? copyForwardPromptByCN : copyNegativePromptByCN).value;
+      if (!res) return;
       copyText(res).then((bool) => {
         if (bool) {
           message.success('复制成功：'+ res);
@@ -240,6 +259,7 @@ const handleActionClick = (methods: operateMethods, type: promptType) => {
       break;
     case 'copyByEnglish':
       const resByEN = (type === 'Forward' ? copyForwardPromptByEN : copyNegativePromptByEN).value;
+      if (!resByEN) return;
       copyText(resByEN).then((bool) => {
         if (bool) {
           message.success('复制成功：'+ resByEN);
@@ -292,6 +312,7 @@ const handleChangeWords = async(e: any, index: number) => {
  */
 const handleTranslateWords = async (e: KeyboardEvent | FocusEvent, index: number) => {
   const { word, key } = promptTypeList[index];
+  promptTypeList[index].loading = true;
   // 换行
   if (e instanceof KeyboardEvent && e.shiftKey && e.key === 'Enter') {
     promptTypeList[index].word = word + '\n';
@@ -327,6 +348,7 @@ const handleTranslateWords = async (e: KeyboardEvent | FocusEvent, index: number
       type
     }
   });
+
   const res = await reqTranslate(translateWords.join(','));
   if (res && res.code === 0) {
     const newData = res.data;
@@ -348,7 +370,8 @@ const handleTranslateWords = async (e: KeyboardEvent | FocusEvent, index: number
     });
     const cur = getCurrentPromptList(key);
     cur.value = newData;
-  }
+  };
+  promptTypeList[index].loading = false;
 };
 
 /**

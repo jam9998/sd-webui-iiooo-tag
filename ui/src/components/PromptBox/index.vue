@@ -18,7 +18,7 @@
         <div :key="i" v-for="(o, i) in operateList" class="operate-item">
           <div class="label" v-if="o.name === 'switch'">{{ o.title }}</div>
             <template v-if="o.name === 'switch'">
-              <a-switch :checked="syncCheck" @change="(v) => { syncCheck.value = v; }"></a-switch>
+              <a-switch :checked="syncCheck" @change="handleSyncCheckChange"></a-switch>
             </template>
             <template v-else-if="o.name === 'button'">
               <a-button 
@@ -145,9 +145,42 @@ const copyPromptByEN = computed(() =>
   ).join(',')
 );
 const TYPE = props.type.replace(props.type[0], props.type[0].toLowerCase());
+let Textarea;
+// onMounted(() => {
+//   Textarea = document.querySelector(el_selector['el_prompt_textarea_'+TYPE]);
+//   Textarea.value = props.word;
+//   Textarea.oninput = (e: any) => {
+//     emit('update:word', e.target.value)
+//   }
+//   Textarea.onkeydown = (e: any) => {
+//     if (e.key === 'Enter' && !e.shiftKey) {
+//       e.preventDefault()
+//     }
+//   }
+//   Textarea.onkeyup = (e: any) => {
+//     if (e.key === 'Enter') {
+//       handleTranslateWords(e);
+//     }
+//   }
+// });
 
-onMounted(() => {
-  let Textarea =document.querySelector(el_selector['el_prompt_textarea_'+TYPE]);
+watch(
+  translateList,
+  (count, prevCount) => {
+    if (syncCheck.value) {
+      if (translateStatus.value === 'update') {
+        Textarea && (Textarea.value = copyPromptByEN.value);
+        emit('update:word', copyPromptByEN.value);
+      } else if (translateStatus.value === 'first') {
+        translateStatus.value = 'update';
+      }
+    }
+  },
+  { deep: true }
+)
+
+const initDom = (selector: any) => {
+  Textarea = document.querySelector(selector);
   Textarea.value = props.word;
   Textarea.oninput = (e: any) => {
     emit('update:word', e.target.value)
@@ -162,21 +195,11 @@ onMounted(() => {
       handleTranslateWords(e);
     }
   }
-});
+};
 
-watch(
-  translateList,
-  (count, prevCount) => {
-    if (syncCheck.value) {
-      if (translateStatus.value === 'update') {
-        emit('update:word', copyPromptByEN.value);
-      } else if (translateStatus.value === 'first') {
-        translateStatus.value = 'update';
-      }
-    }
-  },
-  { deep: true }
-)
+const handleSyncCheckChange = (v: boolean) => {
+  syncCheck.value = v;
+};
 
 const handleChangeWords = async(e: any) => {
   emit('update:word', e.target.value)

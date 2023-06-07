@@ -10,7 +10,6 @@ let up = () => {
   propdom.value=index.value
 }
 </script>
-
 <template>
-  <div class="sd-webui-power-share" @click="up">img2img_prompt click up:{{ index }}</div>
+  <Prompt />
 </template>

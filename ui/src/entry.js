@@ -17,26 +17,26 @@ let setup = async function () {
   const el_txt2img_boxs = await querySelectorAll(el_selector.el_txt2img_prompt);
   const el_txt2img_prompt_textarea = await querySelector(el_selector.el_txt2img_prompt_textarea);
   const el_txt2img_neg_prompt_textarea = await querySelector(el_selector.el_txt2img_neg_prompt_textarea);
-  console.log("el_selector",el_selector)
-  console.log("el_txt2img_boxs",el_txt2img_boxs)
-  console.log("el_txt2img_prompt_textarea",el_txt2img_prompt_textarea)
-  console.log("el_txt2img_neg_prompt_textarea",el_txt2img_neg_prompt_textarea)
+  // console.log("el_selector",el_selector)
+  // console.log("el_txt2img_boxs",el_txt2img_boxs)
+  // console.log("el_txt2img_prompt_textarea",el_txt2img_prompt_textarea)
+  // console.log("el_txt2img_neg_prompt_textarea",el_txt2img_neg_prompt_textarea)
 
   if (el_txt2img_boxs.length) {
     promptApp(el_txt2img_boxs[0], el_txt2img_prompt_textarea, el_txt2img_neg_prompt_textarea)
-    promptApp(el_txt2img_boxs[1], el_txt2img_prompt_textarea)
+    promptApp(el_txt2img_boxs[1], el_txt2img_neg_prompt_textarea)
   }
 
   // 文生图反向提示词
   const el_img2img_boxs = await querySelectorAll(el_selector.el_img2img_prompt);
   const el_img2img_prompt_textarea = await querySelector(el_selector.el_img2img_prompt_textarea);
   const el_img2img_neg_prompt_textarea = await querySelector(el_selector.el_img2img_neg_prompt_textarea);
-  console.log("el_img2img_boxs",el_img2img_boxs)
-  console.log("el_img2img_prompt_textarea",el_img2img_prompt_textarea)
-  console.log("el_img2img_neg_prompt_textarea",el_img2img_neg_prompt_textarea)
+  // console.log("el_img2img_boxs",el_img2img_boxs)
+  // console.log("el_img2img_prompt_textarea",el_img2img_prompt_textarea)
+  // console.log("el_img2img_neg_prompt_textarea",el_img2img_neg_prompt_textarea)
   if (el_img2img_boxs.length) {
     promptApp(el_img2img_boxs[0], el_img2img_prompt_textarea, el_img2img_neg_prompt_textarea)
-    promptApp(el_img2img_boxs[1], el_img2img_prompt_textarea)
+    promptApp(el_img2img_boxs[1], el_img2img_neg_prompt_textarea)
   }
 };
 document.addEventListener("DOMContentLoaded", async () => {

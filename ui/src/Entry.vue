@@ -5,7 +5,7 @@ const props = defineProps(['nodeDom', "negDom"])
 const prompt = ref(null)
 // let setprompt(dom,dom1)
 onMounted(() => {
-  console.log('prompt', props, prompt)
+  // console.log('prompt', props, prompt)
   prompt.value.initDom(props.nodeDom,props.negDom);
 })
 </script>

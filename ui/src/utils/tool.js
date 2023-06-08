@@ -5,7 +5,7 @@ export function sleep(time) {
 }
 export async function querySelector() {
     let args = [...arguments]
-    console.log("querySelector", args)
+    // console.log("querySelector", args)
     try {
         let dom = document.querySelector.apply(document, args)
         if (dom) {
@@ -19,7 +19,7 @@ export async function querySelector() {
 }
 export async function querySelectorAll() {
     let args = [...arguments]
-    console.log("querySelectorAll", args)
+    // console.log("querySelectorAll", args)
     try {
         let doms = document.querySelectorAll.apply(document, args)
         if (doms.length) {

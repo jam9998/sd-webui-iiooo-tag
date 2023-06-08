@@ -1,18 +1,17 @@
 <template>
   <div class="prompt-box-wrapper">
-    <a-spin :spinning="loading">
+    <!-- <a-spin :spinning="loading">
       <a-textarea
         class="prompt-textarea"
         :disabled="loading"
         :data-type="type"
-        :placeholder="placeholder" 
         allow-clear 
         show-count
         :bordered="false" 
         :maxlength="promptWordMaxLength"
         :rows="6"
       />
-    </a-spin>
+    </a-spin> -->
     <div class="operate-box">
       <div class="operate-top-inline">
         <div :key="i" v-for="(o, i) in operateList" class="operate-item">
@@ -24,10 +23,29 @@
               <a-button 
                 type="primary" 
                 ghost 
-                @click="handleActionClick(o.methods, type)"
+                @click="handleActionClick(o.methods)"
               >
                 {{ o.title }}
               </a-button>
+            </template>
+            <template v-else-if="o.name === 'select'">
+              <a-select
+                v-if="type === 'Forward'"
+                class="prompt-select"
+                dropdownClassName="prompt-dropdown"
+                style="width:150px"
+                :value="o.value"
+                @change="(v) => handleActionClick(o.methods, v)"
+              >
+                <a-select-option 
+                  :key="opt.id" 
+                  v-for="opt in o.options"
+                  :value="o.id"
+                  style="color: #fff"
+                >
+                  {{ opt.name }}
+                </a-select-option>
+              </a-select>
             </template>
         </div>
       </div>
@@ -56,9 +74,12 @@ export default {
 }
 </script>
 <script setup lang="ts">
-import { computed, onMounted, ref, Ref, reactive, watch } from 'vue';
+import { computed, onMounted, ref, Ref, reactive, watch, getCurrentInstance } from 'vue';
 import { message } from 'ant-design-vue';
-import { translationPromptRequest } from '../../api/index';
+import { 
+  tagManageKeyWordList,
+  translationPromptRequest 
+} from '../../api/index';
 import {
   combinationPrompt,
   countLayers,
@@ -71,7 +92,7 @@ import {
 import { el_selector } from "../../utils/gradio";
 
 type promptType = 'Forward' | 'Negative';
-type operateMethods = 'copyByChinese' | 'copyByEnglish' | 'sort';
+type operateMethods = 'copyByChinese' | 'copyByEnglish' | 'sort' | 'selectkeyword';
 type StatusType = 'first' | 'update';
 interface translateType {
   id: number,
@@ -81,19 +102,16 @@ interface translateType {
   weight: number,
   type: '' | 'lora'
 }
+
 const props = withDefaults(defineProps<{
-  word: string,
-  placeholder: string,
   loading: boolean,
   type: promptType
 }>(), {
-  word: '',
-  placeholder: '',
   loading: false,
   type: 'Forward'
 });
 const emit = defineEmits({
-  ['update:word']: (text: string) => true,
+  ['update:keyword']: (text: string) => true,
   ['update:loading']: (load: boolean) => true
 })
 const operateList = reactive([
@@ -121,7 +139,7 @@ const operateList = reactive([
   {
     name: 'select',
     title: '质量强化模板',
-    methods: 'selectTemplate',
+    methods: 'selectkeyword',
     options: [],
     value: ''
   }
@@ -144,25 +162,14 @@ const copyPromptByEN = computed(() =>
     combinationPrompt(p.englishName, p.weight, p.type)
   ).join(',')
 );
-const TYPE = props.type.replace(props.type[0], props.type[0].toLowerCase());
+
 let Textarea;
-// onMounted(() => {
-//   Textarea = document.querySelector(el_selector['el_prompt_textarea_'+TYPE]);
-//   Textarea.value = props.word;
-//   Textarea.oninput = (e: any) => {
-//     emit('update:word', e.target.value)
-//   }
-//   Textarea.onkeydown = (e: any) => {
-//     if (e.key === 'Enter' && !e.shiftKey) {
-//       e.preventDefault()
-//     }
-//   }
-//   Textarea.onkeyup = (e: any) => {
-//     if (e.key === 'Enter') {
-//       handleTranslateWords(e);
-//     }
-//   }
-// });
+let NegativeTextarea;
+onMounted(() => {
+  if (props.type === 'Forward') {
+    reqTagManageKeyWordList();
+  }
+});
 
 watch(
   translateList,
@@ -170,7 +177,6 @@ watch(
     if (syncCheck.value) {
       if (translateStatus.value === 'update') {
         Textarea && (Textarea.value = copyPromptByEN.value);
-        emit('update:word', copyPromptByEN.value);
       } else if (translateStatus.value === 'first') {
         translateStatus.value = 'update';
       }
@@ -179,12 +185,11 @@ watch(
   { deep: true }
 )
 
-const initDom = (selector: any) => {
-  Textarea = document.querySelector(selector);
-  Textarea.value = props.word;
-  Textarea.oninput = (e: any) => {
-    emit('update:word', e.target.value)
-  }
+const initDom = (selector: any, negativeSelector: any) => {
+  Textarea = selector;
+  negativeSelector && (NegativeTextarea = negativeSelector);
+  Textarea.value = '';
+  Textarea.oninput = (e: any) => {}
   Textarea.onkeydown = (e: any) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -199,10 +204,6 @@ const initDom = (selector: any) => {
 
 const handleSyncCheckChange = (v: boolean) => {
   syncCheck.value = v;
-};
-
-const handleChangeWords = async(e: any) => {
-  emit('update:word', e.target.value)
 };
 
 /**
@@ -221,7 +222,7 @@ const copyText = (text: string) => {
     });
 };
 
-const handleActionClick = (methods: operateMethods, type: promptType) => {
+const handleActionClick = (methods: operateMethods, value: any) => {
   switch (methods) {
     case 'copyByChinese':
       if (!copyPromptByCN.value) return;
@@ -244,18 +245,56 @@ const handleActionClick = (methods: operateMethods, type: promptType) => {
       })
       break;
     case 'sort':
-      handleSortPromptList(type)
+      handleSortPromptList();
       break;
+    case 'selectkeyword':
+      handleChangeKeywords(value);
+      break
     default:
       break;
   }
 };
 
+const handleChangeKeywords = (value: any) => {
+  const index = operateList.findIndex(o => o.title === '质量强化模板');
+  if (index >= 0) {
+    if (value === operateList[index].value) return;
+    const preValue = operateList[index].value;
+    operateList[index].value = value;
+    const keyWord = (operateList[index].options as Array<any>).filter(opt => opt.id === value)[0];
+    // 找到之前质量词用于替换
+    if (preValue && Textarea && NegativeTextarea) {
+      const preKeyWord = (operateList[index].options as Array<any>).filter(opt => opt.id === preValue)[0];
+      const n = preKeyWord.negCueWord;
+      const p = preKeyWord.posCueWord;
+      const nIndex = NegativeTextarea.value.lastIndexOf(n);
+      const pIndex = Textarea.value.lastIndexOf(p);
+      if (nIndex >=0 && pIndex >= 0) {
+        NegativeTextarea.value = NegativeTextarea.value.slice(0, nIndex) + NegativeTextarea.value.slice(nIndex + n.length);
+        Textarea.value = Textarea.value.slice(0, pIndex) + Textarea.value.slice(pIndex + p.length);
+      }
+    }
+    if (keyWord) {
+      const negCueWord = keyWord.negCueWord;
+      const posCueWord = keyWord.posCueWord;
+      if (Textarea) {
+        const length = Textarea.value.length;
+        const value = Textarea.value;
+        Textarea.value = value + ((value[length - 1] === ',' || value[length - 1] === '，' || !value) ? '' : ',') + posCueWord;
+      }
+      if (NegativeTextarea) {
+        const length = NegativeTextarea.value.length;
+        const value = NegativeTextarea.value;
+        NegativeTextarea.value = value + ((value[length - 1] === ',' || value[length - 1] === '，' || !value) ? '' : ',') + negCueWord;
+      }
+    }
+  }
+};
+
 /**
  *  提示词列表排序操作
- *  @param {promptType} type
  */
-const handleSortPromptList = (type: promptType) => {
+const handleSortPromptList = () => {
   translateList.value.sort((a, b) => {
     if (a.type === 'lora' && b.type === 'lora') {
       return Math.abs(b.weight) - Math.abs(a.weight);
@@ -273,18 +312,17 @@ const handleSortPromptList = (type: promptType) => {
 
 /**
  *  翻译词条操作
- *  @param {KeyboardEvent | FocusEvent} e
+ *  @param {KeyboardEvent | null } e
  */
-const handleTranslateWords = async (e: KeyboardEvent | FocusEvent) => {
-  if (!props.word) return;
+const handleTranslateWords = async (e: KeyboardEvent | null) => {
+  const inputValue = (e && e.target.value) || Textarea.value;
+  if (!inputValue) return;
   // 换行
-  if (e instanceof KeyboardEvent && e.shiftKey && e.key === 'Enter') {
-    const newWord = props.word + '\n';
-    emit('update:word', newWord)
+  if (e && e.shiftKey && e.key === 'Enter') {
     return;
   }
-  e.preventDefault();
-  const wordArr = splitPrompts(props.word);
+  e && e.preventDefault();
+  const wordArr = splitPrompts(inputValue);
   if (!wordArr.length) return;
   emit('update:loading', true);
   const translateWords = [];
@@ -356,6 +394,26 @@ const reqTranslate = async (words: string) => {
     return { msg: error };
   }
 };
+/**
+ *  获取词条质量词
+ */
+const reqTagManageKeyWordList =async () => {
+  try {
+    const res: any = await tagManageKeyWordList();
+    if (res.code === 0) {
+      const index = operateList.findIndex(o => o.methods === 'selectkeyword');
+      if (index >= 0) {
+        operateList[index].options = res.data;
+      }
+    }
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+defineExpose({
+  initDom
+})
 </script>
 <style lang="less" scoped>
 .prompt-box-wrapper {
@@ -371,6 +429,33 @@ const reqTranslate = async (words: string) => {
   }
   &::after {
     color: #fff;
+  }
+}
+:global(.prompt-dropdown) {
+  background-color: #232323;
+}
+:global(.ant-select-item-option-active:not(.ant-select-item-option-disabled)) {
+  background-color: #1890ff;
+}
+:global(.ant-select-item-option-selected:not(.ant-select-item-option-disabled)) {
+  background-color: #91d5ff;
+}
+.prompt-select {
+  :deep(.ant-select-selector) {
+    background-color: #232323;
+    color: #fff;
+    border-color: transparent;
+    &:hover {
+      border-color: #3d3d3d;
+    }
+  }
+  :deep(.ant-select-arrow) {
+    color: #fff;
+  }
+  &.ant-select-focused:not(.ant-select-disabled) {
+    :deep(.ant-select-selector) {
+      border-color: #3d3d3d;
+    }
   }
 }
 .operate-box {

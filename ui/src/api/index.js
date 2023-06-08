@@ -10,3 +10,8 @@ export const translationPromptRequest = async (payload) => {
   const url = prefixUrl + "/tagManageInfo/translation";
   return await request.post(url, payload);
 };
+
+export const tagManageKeyWordList = async (payload) => {
+  const url = prefixUrl + "/tagManageKeyword/list";
+  return await request.post(url, payload);
+};

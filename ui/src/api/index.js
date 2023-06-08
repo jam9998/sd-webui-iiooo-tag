@@ -1,7 +1,8 @@
 import request from "../core/request";
 
+const api="https://x.580u.com/yun"
 const moduleId = "1639139129914560513";
-const module = "/module";
+const module = api+"/module";
 const apiModuleSuffix = "/app";
 const version = "v1";
 

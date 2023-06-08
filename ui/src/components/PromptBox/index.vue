@@ -30,7 +30,7 @@
             </template>
             <template v-else-if="o.name === 'select'">
               <a-select
-                v-if="type === 'Forward'"
+                v-if="promptCateGory === 'Forward'"
                 class="prompt-select"
                 dropdownClassName="prompt-dropdown"
                 style="width:150px"
@@ -104,14 +104,11 @@ interface translateType {
 }
 
 const props = withDefaults(defineProps<{
-  loading: boolean,
-  type: promptType
+  loading: boolean
 }>(), {
-  loading: false,
-  type: 'Forward'
+  loading: false
 });
 const emit = defineEmits({
-  ['update:keyword']: (text: string) => true,
   ['update:loading']: (load: boolean) => true
 })
 const operateList = reactive([
@@ -150,7 +147,8 @@ const syncCheck: Ref<boolean> = ref(true);
 const translateList: Ref<Array<translateType>> = ref([]);
 const currentDragType: Ref<promptType | ''> = ref('');
 const currentDragIndex: Ref<Number> = ref(0);
-const translateStatus: Ref<StatusType> = ref('first')
+const translateStatus: Ref<StatusType> = ref('first');
+const promptCateGory: Ref<promptType> = ref('Negative');
 
 const copyPromptByCN = computed(() => 
   translateList.value.map(p => 
@@ -166,11 +164,19 @@ const copyPromptByEN = computed(() =>
 let Textarea;
 let NegativeTextarea;
 onMounted(() => {
-  if (props.type === 'Forward') {
+  if (promptCateGory.value === 'Forward') {
     reqTagManageKeyWordList();
   }
 });
 
+watch(
+  promptCateGory,
+  (cur, pre) => {
+    if (pre === 'Negative' && cur === 'Forward') {
+      reqTagManageKeyWordList();
+    }
+  }
+)
 watch(
   translateList,
   (count, prevCount) => {
@@ -186,6 +192,9 @@ watch(
 )
 
 const initDom = (selector: any, negativeSelector: any) => {
+  if (selector && negativeSelector) {
+    promptCateGory.value = 'Forward';
+  }
   Textarea = selector;
   negativeSelector && (NegativeTextarea = negativeSelector);
   Textarea.value = '';

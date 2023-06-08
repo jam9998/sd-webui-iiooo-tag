@@ -38,15 +38,15 @@ export default defineConfig({
       // https://rollupjs.org/configuration-options/#watch
     },
     lib: {
-      entry: resolve(__dirname, "src/main.js"),
-      name: "sd-webui-power-share",
+      entry: resolve(__dirname, "src/entry.js"),
+      name: "sd-webui-iiooo-tag",
       formats: ["umd"],
     },
     rollupOptions: {
       plugins: [],
       output: {
         globals: {},
-        name: "sdWebuiPowerShare",
+        name: "sd-webui-iiooo-tag",
         dir: "../", // 对于多文件构建，指定文件夹输出路径
         format: "umd",
         chunkFileNames: "javascript/[name].chunk.js", // 指定 chunk 文件名称

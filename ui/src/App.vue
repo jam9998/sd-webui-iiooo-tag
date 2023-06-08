@@ -21,7 +21,6 @@ onMounted(() => {
   negative.value.initDom(negativeDom);
 });
 </script>
-
 <template>
   <div class="prompt-container">
     <textarea id="yj-texteara"></textarea>

@@ -1,13 +1,17 @@
 <script setup>
 import { el_selector } from "./utils/gradio";
-import {ref} from "vue"
+import { ref,defineProps } from "vue"
 console.log("test")
 let index = ref(0)
-let propdom=document.querySelector(el_selector.el_img2img_prompt_textarea)
+let propdom = document.querySelector(el_selector.el_img2img_prompt_textarea)
 let up = () => {
   index.value++;
-  propdom.value=index.value
+  propdom.value = index.value
 }
+const props = defineProps(['nodeDom'])
+onMounted(() => {
+  console.log('prompt', props)
+})
 </script>
 
 <template>

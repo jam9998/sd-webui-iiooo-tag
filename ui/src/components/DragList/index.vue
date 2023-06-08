@@ -16,7 +16,7 @@ export default {
 <script setup lang="ts">
 import { Ref } from 'vue';
 const props = withDefaults(defineProps<{
-  list?: Array<any>
+  list?: Ref<Array<any>>
 }>(), {
   list: [] as any
 });

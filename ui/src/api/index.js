@@ -1,7 +1,7 @@
 import request from "../core/request";
 
 const env = import.meta.env;
-const api = env.VITE_PLUGIN_BASE_URL;
+const api = env.VITE_PLUGIN_BASE_URL + env.VITE_PLUGIN_API;
 const moduleId = "1639139129914560513";
 const module = api+"/module";
 const apiModuleSuffix = "/app";

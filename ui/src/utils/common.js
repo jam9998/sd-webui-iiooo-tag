@@ -276,8 +276,8 @@ export const canTranslate = (text) => {
  */
 export const getPromptWeightNum = (prompt) => {
   const match = prompt.match(weightNumRegex);
-  let weightNum = match ? parseFloat(match[2]) : 0;
-  weightNum = weightNum >= 0 ? weightNum : 0;
+  let weightNum = match ? parseFloat(match[2]) : 1;
+  weightNum = weightNum > 0 ? weightNum : 1;
   return weightNum;
 };
 
@@ -309,7 +309,7 @@ export const countLayers = (str, start = '(', end = ')') => {
 
 export const combinationPrompt = (str, weight, type = '') => {
   let res = str;
-  if (!type && weight) {
+  if (!type && typeof weight === 'number' && weight !== 1) {
     res = "(" + str + ":" + weight + ")";
   } else if (type === "lora") {
     res = "<" + str + ":" + weight + ">";

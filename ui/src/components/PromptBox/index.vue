@@ -14,17 +14,26 @@
     </a-spin> -->
     <div class="operate-box">
       <div class="operate-top-inline">
+        <a-tooltip>
+          <template #title>
+            回车自动翻译，支持中英文混编，支持本地化保存提交记录
+          </template>
+          <div style="color:#fff;font-size:16px">
+            <QuestionCircleOutlined style="cursor:pointer" />
+          </div>
+        </a-tooltip>
         <div :key="i" v-for="(o, i) in operateList" class="operate-item">
           <div class="label" v-if="o.name === 'switch'">{{ o.title }}</div>
             <template v-if="o.name === 'switch'">
               <a-switch :checked="syncCheck" @change="handleSyncCheckChange"></a-switch>
             </template>
             <template v-else-if="o.name === 'button'">
-              <a-button 
-                type="primary" 
-                ghost 
+              <a-button
+                type="primary"
+                class="prompt-primary-btn"
                 @click="handleActionClick(o.methods)"
               >
+                <component :is="o.icon"></component>
                 {{ o.title }}
               </a-button>
             </template>
@@ -34,6 +43,7 @@
                 class="prompt-select"
                 dropdownClassName="prompt-dropdown"
                 style="width:150px"
+                :placeholder="o.placeholder"
                 :value="o.value"
                 @change="(v) => handleActionClick(o.methods, v)"
               >
@@ -48,6 +58,23 @@
               </a-select>
             </template>
         </div>
+        <a-select
+          v-if="promptCateGory === 'Forward'"
+          class="prompt-select"
+          dropdownClassName="prompt-dropdown"
+          style="width:250px;margin-left:auto"
+          placeholder="提交记录"
+          @change="(v) => handleSubmitRecordChange(v)"
+        >
+          <a-select-option 
+            :key="item.id" 
+            v-for="(item, index) in submitList"
+            :value="item.id"
+            style="color: #fff"
+          >
+            最近第{{ index + 1 }}条记录
+          </a-select-option>
+        </a-select>
       </div>
       <a-spin :spinning="loading">
         <DragList :list="translateList">
@@ -58,7 +85,7 @@
               v-model:dragIndex="currentDragIndex"
               v-model:dragType="currentDragType"
               v-model:list="translateList"
-              :listType="type"
+              :listType="promptCateGory"
               :preview="t"
               :index="i"
             />
@@ -76,6 +103,11 @@ export default {
 <script setup lang="ts">
 import { computed, onMounted, ref, Ref, reactive, watch, getCurrentInstance } from 'vue';
 import { message } from 'ant-design-vue';
+import { 
+  CopyOutlined, 
+  QuestionCircleOutlined,
+  RetweetOutlined
+} from '@ant-design/icons-vue';
 import { 
   tagManageKeyWordList,
   translationPromptRequest 
@@ -102,41 +134,40 @@ interface translateType {
   weight: number,
   type: '' | 'lora'
 }
-
-const props = withDefaults(defineProps<{
-  loading: boolean
-}>(), {
-  loading: false
-});
-const emit = defineEmits({
-  ['update:loading']: (load: boolean) => true
-})
+interface submitType {
+  id: number,
+  Forward?: Array<translateType>,
+  Negative?: Array<translateType>
+}
 const operateList = reactive([
   {
     name: 'switch',
-    title: '同步',
+    title: '同步翻译',
     forwardValue: true,
     negativeValue: true
   },
   {
     name: 'button',
+    icon: CopyOutlined,
     title: '复制中文',
     methods: 'copyByChinese'
   },
   {
     name: 'button',
+    icon: CopyOutlined,
     title: '复制英文',
     methods: 'copyByEnglish'
   },
   {
     name: 'button',
-    title: '排序',
+    icon: RetweetOutlined,
     methods: 'sort'
   },
   {
     name: 'select',
     title: '质量强化模板',
     methods: 'selectkeyword',
+    placeholder: '质量词',
     options: [],
     value: ''
   }
@@ -149,7 +180,8 @@ const currentDragType: Ref<promptType | ''> = ref('');
 const currentDragIndex: Ref<Number> = ref(0);
 const translateStatus: Ref<StatusType> = ref('first');
 const promptCateGory: Ref<promptType> = ref('Negative');
-
+const loading = ref(false);
+const submitList: Ref<Array<submitType>> = ref(localStorage.getItem('iiooo_submit_record') ? JSON.parse(localStorage.getItem('iiooo_submit_record')) :[]);
 const copyPromptByCN = computed(() => 
   translateList.value.map(p => 
     combinationPrompt(p.chineseName, p.weight, p.type)
@@ -190,7 +222,15 @@ watch(
   },
   { deep: true }
 )
-
+const updateTranslateList = (v: Array<translateType>) => {
+  translateList.value = v;
+}
+const useTranslateList = () => {
+  return {
+    translateList,
+    setTranslateList: updateTranslateList
+  }
+}
 const initDom = (selector: any, negativeSelector: any) => {
   if (selector && negativeSelector) {
     promptCateGory.value = 'Forward';
@@ -204,12 +244,72 @@ const initDom = (selector: any, negativeSelector: any) => {
       e.preventDefault()
     }
   }
-  Textarea.onkeyup = (e: any) => {
+  Textarea.onkeyup = async (e: any) => {
     if (e.key === 'Enter') {
-      handleTranslateWords(e);
+      await handleTranslateWords(e);
+    } else if (e === '__custom') {
+      await handleTranslateWords(null);
     }
   }
+  Textarea.$useTranslateList = useTranslateList;
 };
+
+const saveSubmitRecord = (async = false) => {
+  if (Textarea) {
+    const size = getLocalStorageSize();
+    if (typeof size === 'number') {
+      if (size > 1024 * 1024 * 5) {
+        localStorage.removeItem('iiooo_submit_record');
+      }
+      let preData = localStorage.getItem('iiooo_submit_record')
+      const pre = preData ? JSON.parse(preData) : [];
+      const res = {
+        id: pre.length,
+        [promptCateGory.value]: translateList.value.slice(0)
+      };
+      if (async && NegativeTextarea) {
+        const { translateList: otherT } = NegativeTextarea.$useTranslateList();
+        const type = promptCateGory.value === 'Forward' ? 'Negative' : 'Forward';
+        res[type] = otherT.value.slice(0);
+      }
+      pre.unshift(res);
+      submitList.value = pre;
+      localStorage.setItem('iiooo_submit_record', JSON.stringify(pre));
+    }
+  }
+}
+const getLocalStorageSize = () => {
+  let storage: any = ''
+  if (!window.localStorage) {
+    console.info('浏览器不支持localStorage');
+  } else {
+    storage = window.localStorage;
+  }
+  if (storage !== '') {
+    var size = 0;
+    for (var item in storage) {
+      if (Object.prototype.hasOwnProperty.call(storage, item)) {
+        size += storage.getItem(item).length;
+      }
+    }
+    return size;
+  }
+  return undefined;
+}
+
+const handleSubmitRecordChange = (v: number) => {
+  const index = submitList.value.findIndex(s => s.id === v);
+  if (index >= 0) {
+    translateStatus.value !== 'update' && (translateStatus.value = 'update');
+    const newForwardValue = submitList.value[index].Forward || [];
+    const newNegativeValue = submitList.value[index].Negative || [];
+    translateList.value = promptCateGory.value === 'Forward' ? newForwardValue : newNegativeValue;
+    if (NegativeTextarea) {
+      const { setTranslateList } = NegativeTextarea.$useTranslateList();
+      setTranslateList(promptCateGory.value === 'Forward' ? newNegativeValue : newForwardValue);
+    }
+  }
+}
 
 const handleSyncCheckChange = (v: boolean) => {
   syncCheck.value = v;
@@ -264,7 +364,7 @@ const handleActionClick = (methods: operateMethods, value: any) => {
   }
 };
 
-const handleChangeKeywords = (value: any) => {
+const handleChangeKeywords = async(value: any) => {
   const index = operateList.findIndex(o => o.title === '质量强化模板');
   if (index >= 0) {
     if (value === operateList[index].value) return;
@@ -272,7 +372,7 @@ const handleChangeKeywords = (value: any) => {
     operateList[index].value = value;
     const keyWord = (operateList[index].options as Array<any>).filter(opt => opt.id === value)[0];
     // 找到之前质量词用于替换
-    if (preValue && Textarea && NegativeTextarea) {
+    if (preValue && preValue !== '质量词' && Textarea && NegativeTextarea) {
       const preKeyWord = (operateList[index].options as Array<any>).filter(opt => opt.id === preValue)[0];
       const n = preKeyWord.negCueWord;
       const p = preKeyWord.posCueWord;
@@ -284,8 +384,8 @@ const handleChangeKeywords = (value: any) => {
       }
     }
     if (keyWord) {
-      const negCueWord = keyWord.negCueWord;
-      const posCueWord = keyWord.posCueWord;
+      const negCueWord = keyWord.negCueWord || '';
+      const posCueWord = keyWord.posCueWord || '';
       if (Textarea) {
         const length = Textarea.value.length;
         const value = Textarea.value;
@@ -295,6 +395,13 @@ const handleChangeKeywords = (value: any) => {
         const length = NegativeTextarea.value.length;
         const value = NegativeTextarea.value;
         NegativeTextarea.value = value + ((value[length - 1] === ',' || value[length - 1] === '，' || !value) ? '' : ',') + negCueWord;
+      }
+      if (Textarea && NegativeTextarea) {
+        let cur = Textarea.onkeyup('__custom');
+        let oth = NegativeTextarea.onkeyup('__custom');
+        await cur;
+        await oth;
+        saveSubmitRecord(true);
       }
     }
   }
@@ -333,7 +440,7 @@ const handleTranslateWords = async (e: KeyboardEvent | null) => {
   e && e.preventDefault();
   const wordArr = splitPrompts(inputValue);
   if (!wordArr.length) return;
-  emit('update:loading', true);
+  loading.value = true;
   const translateWords = [];
   const cacheWords = wordArr.map((word, index) => {
     let type = loraRegex.test(word) ? 'lora' : '';
@@ -361,7 +468,6 @@ const handleTranslateWords = async (e: KeyboardEvent | null) => {
       type
     }
   });
-  emit('update:loading', true);
   const res = await reqTranslate(translateWords.join(','));
   if (res && res.code === 0) {
     const newData = res.data;
@@ -382,8 +488,11 @@ const handleTranslateWords = async (e: KeyboardEvent | null) => {
       newData[index].weight =  weight;
     });
     translateList.value = newData;
+    if (e) {
+      saveSubmitRecord();
+    }
   };
-  emit('update:loading', false);
+  loading.value = false;
 };
 
 /**
@@ -412,7 +521,14 @@ const reqTagManageKeyWordList =async () => {
     if (res.code === 0) {
       const index = operateList.findIndex(o => o.methods === 'selectkeyword');
       if (index >= 0) {
-        operateList[index].options = res.data;
+        operateList[index].options = [
+          {
+            name: '请选择质量词',
+            id: '质量词'
+          },
+          ...res.data
+        ];
+        operateList[index].value = '质量词';
       }
     }
   } catch (error) {
@@ -440,6 +556,20 @@ defineExpose({
     color: #fff;
   }
 }
+.prompt-primary-btn {
+  color: #9ec5ff;
+  background-color: #000;
+  border: 1px solid transparent;
+  padding: 0.25rem 0.9375rem;
+  &:hover,
+  &:focus {
+    background-color: #384f71;
+    border: 1px solid transparent;
+  }
+  &:focus {
+    color: #1890ff;
+  }
+}
 :global(.prompt-dropdown) {
   background-color: #232323;
 }
@@ -448,6 +578,9 @@ defineExpose({
 }
 :global(.ant-select-item-option-selected:not(.ant-select-item-option-disabled)) {
   background-color: #91d5ff;
+}
+:global(.ant-select-item-empty > .ant-empty-normal) {
+  color: #fff;
 }
 .prompt-select {
   :deep(.ant-select-selector) {
@@ -472,6 +605,7 @@ defineExpose({
 }
 .operate-top-inline {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   padding: 0.75rem;
   border-bottom: 1px solid #3d3d3d;

@@ -3,20 +3,20 @@
   <div 
     :draggable="true"
     class="prompt-preview-child"
-    :style="{backgroundColor: listType === 'Forward' ? positivePromptBackGroundEnum[0] : negativePromptBackGroundEnum[0]}"
+    :style="{backgroundColor: backgroundColor}"
     @dragenter="dragenter($event, listType, index)"
     @dragover.prevent
     @dragstart="dragstart(listType, index)"
   >
-    <a-popover placement="top">
+    <a-popover placement="top" v-model:visible="visible">
       <template #content>
         <div class="prompt-preview-popover">
           <div>
-            <a-button type="primary" @click="handleUpdateWeight('dec', index)">
+            <a-button type="primary" size="small" @click="handleUpdateWeight('dec', index)">
               <template #icon><MinusOutlined /></template>
             </a-button>
             <span class="weight">{{ preview.weight }}</span>
-            <a-button type="primary"  @click="handleUpdateWeight('up', index)">
+            <a-button type="primary" size="small"  @click="handleUpdateWeight('up', index)">
               <template #icon><PlusOutlined /></template>
             </a-button>
           </div>
@@ -45,33 +45,35 @@ export default {
 }
 </script>
 <script setup lang="ts">
+import { computed, ref } from 'vue';
 import { CloseCircleOutlined, MinusOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { addFloat, combinationPrompt } from "../../utils/common";
+
 const positivePromptBackGroundEnum = {
-  '-5': '#717171',
-  '-4': '#969696',
-  '-3': '#bcbcbc',
-  '-2': '#c9c9c9',
-  '-1': '#d7d7d7',
-  '0': 'rgb(105, 184, 255)',
-  '1': 'rgb(59, 154, 240)',
-  '2': 'rgb(12, 140, 255)',
-  '3': 'rgb(0, 66, 178)',
-  '4': 'rgb(0, 20, 183)',
-  '5': 'rgb(0, 10, 123)'
+  '0.5': '#717171',
+  '0.6': '#969696',
+  '0.7': '#bcbcbc',
+  '0.8': '#c9c9c9',
+  '0.9': '#d7d7d7',
+  '1': 'rgb(105, 184, 255)',
+  '1.1': 'rgb(59, 154, 240)',
+  '1.2': 'rgb(12, 140, 255)',
+  '1.3': 'rgb(0, 66, 178)',
+  '1.4': 'rgb(0, 20, 183)',
+  '1.5': 'rgb(0, 10, 123)'
 };
 const negativePromptBackGroundEnum = {
-  '-5': '#717171',
-  '-4': '#969696',
-  '-3': '#bcbcbc',
-  '-2': '#c9c9c9',
-  '-1': '#d7d7d7',
-  '0': 'rgb(178, 135, 251)',
-  '1': '#723ECD',
-  '2': 'rgb(119, 58, 224)',
-  '3': 'rgb(98, 32, 215)',
-  '4': 'rgb(64, 9, 140)',
-  '5': 'rgb(40, 3, 94)'
+  '0.5': '#717171',
+  '0.6': '#969696',
+  '0.7': '#bcbcbc',
+  '0.8': '#c9c9c9',
+  '0.9': '#d7d7d7',
+  '1': 'rgb(178, 135, 251)',
+  '1.1': '#723ECD',
+  '1.2': 'rgb(119, 58, 224)',
+  '1.3': 'rgb(98, 32, 215)',
+  '1.4': 'rgb(64, 9, 140)',
+  '1.5': 'rgb(40, 3, 94)'
 };
 type promptType = 'Forward' | 'Negative';
 interface promptItemType {
@@ -109,6 +111,11 @@ const emit = defineEmits({
   }
 });
 
+const visible = ref(false);
+const backgroundColor = computed(() => {
+  let w =  props.preview.weight > 1.5 ? 1.5 :  props.preview.weight < 0.5 ? 0.5 : props.preview.weight;
+  return props.listType === 'Forward' ? positivePromptBackGroundEnum[w] : negativePromptBackGroundEnum[w]; 
+});
 /**
  *  拖拽元素被拖拽操作
  *  @param {promptType} type
@@ -116,6 +123,7 @@ const emit = defineEmits({
  */
 const dragstart = (type: promptType, index: number) => {
   if (index >= 0) {
+    visible.value = false;
     emit('update:dragIndex', index);
     emit('update:dragType', type);
   }
@@ -159,8 +167,8 @@ const handleUpdateWeight = (type: 'up' | 'dec', index: number) => {
   switch (type) {
     case 'up':
       if (
-        (promptType === 'lora' && weight >= 0 && weight < 1) || 
-        (!promptType && weight >= 0 && weight < 1.7)
+        (promptType === 'lora' && weight > 0 && weight < 1) || 
+        (!promptType && weight > 0 && weight < 1.7)
       ) {
         let w = addFloat(weight, 0.1);
         list[index].weight = w;
@@ -169,8 +177,8 @@ const handleUpdateWeight = (type: 'up' | 'dec', index: number) => {
       break;
     case 'dec':
       if (
-        (promptType === 'lora' && weight > 0 && weight <= 1) ||
-        (!promptType && weight > 0 && weight <= 1.7)
+        (promptType === 'lora' && weight > 0.1 && weight <= 1) ||
+        (!promptType && weight > 0.1 && weight <= 1.7)
       ) {
         let w = addFloat(weight, -0.1);
         list[index].weight = w;
@@ -194,8 +202,8 @@ const handleUpdateWeight = (type: 'up' | 'dec', index: number) => {
   align-items: center;
   justify-content: space-between;
   box-sizing: border-box;
-  height: 3.25rem;
-  line-height: 2.5rem;
+  height: 2.625rem;
+  line-height: 1.875rem;
   padding: 0.375rem 0.75rem;
   cursor: move;
   .text {
@@ -226,6 +234,7 @@ const handleUpdateWeight = (type: 'up' | 'dec', index: number) => {
     color: #fff;
   }
   .weight {
+    user-select: none;
     padding: 0 0.375rem;
   }
   .text {

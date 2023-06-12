@@ -40,6 +40,7 @@
             <template v-else-if="o.name === 'select'">
               <a-select
                 v-if="promptCateGory === 'Forward'"
+                allowClear
                 class="prompt-select"
                 dropdownClassName="prompt-dropdown"
                 style="width:150px"
@@ -60,6 +61,7 @@
         </div>
         <a-select
           v-if="promptCateGory === 'Forward'"
+          allowClear
           class="prompt-select"
           dropdownClassName="prompt-dropdown"
           style="width:180px;margin-left:auto"
@@ -600,6 +602,13 @@ defineExpose({
     }
   }
   :deep(.ant-select-arrow) {
+    color: #fff;
+  }
+  :deep(.ant-select-clear) {
+    background-color: #232323;
+  }
+  :deep(.anticon-close-circle) {
+    background-color: #232323;
     color: #fff;
   }
   &.ant-select-focused:not(.ant-select-disabled) {

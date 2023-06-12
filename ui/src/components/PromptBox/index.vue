@@ -62,8 +62,8 @@
           v-if="promptCateGory === 'Forward'"
           class="prompt-select"
           dropdownClassName="prompt-dropdown"
-          style="width:250px;margin-left:auto"
-          placeholder="提交记录"
+          style="width:180px;margin-left:auto"
+          placeholder="历史记录"
           @change="(v) => handleSubmitRecordChange(v)"
         >
           <a-select-option 
@@ -72,7 +72,7 @@
             :value="item.id"
             style="color: #fff"
           >
-            最近第{{ index + 1 }}条记录
+            第{{ index + 1 }}条记录—{{ item.id.split(':')[1] }}
           </a-select-option>
         </a-select>
       </div>
@@ -149,13 +149,13 @@ const operateList = reactive([
   {
     name: 'button',
     icon: CopyOutlined,
-    title: '复制中文',
+    title: '中文',
     methods: 'copyByChinese'
   },
   {
     name: 'button',
     icon: CopyOutlined,
-    title: '复制英文',
+    title: '英文',
     methods: 'copyByEnglish'
   },
   {
@@ -165,11 +165,11 @@ const operateList = reactive([
   },
   {
     name: 'select',
-    title: '质量强化模板',
+    title: '质量词模板',
     methods: 'selectkeyword',
-    placeholder: '质量词',
+    placeholder: '质量词模板',
     options: [],
-    value: ''
+    value: undefined
   }
 ])
 const promptWordMaxLength = ref(300);
@@ -178,7 +178,6 @@ const syncCheck: Ref<boolean> = ref(true);
 const translateList: Ref<Array<translateType>> = ref([]);
 const currentDragType: Ref<promptType | ''> = ref('');
 const currentDragIndex: Ref<Number> = ref(0);
-const translateStatus: Ref<StatusType> = ref('first');
 const promptCateGory: Ref<promptType> = ref('Negative');
 const loading = ref(false);
 const submitList: Ref<Array<submitType>> = ref(localStorage.getItem('iiooo_submit_record') ? JSON.parse(localStorage.getItem('iiooo_submit_record')) :[]);
@@ -213,11 +212,7 @@ watch(
   translateList,
   (count, prevCount) => {
     if (syncCheck.value) {
-      if (translateStatus.value === 'update') {
-        Textarea && (Textarea.value = copyPromptByEN.value);
-      } else if (translateStatus.value === 'first') {
-        translateStatus.value = 'update';
-      }
+      Textarea && (Textarea.value = copyPromptByEN.value);
     }
   },
   { deep: true }
@@ -225,12 +220,18 @@ watch(
 const updateTranslateList = (v: Array<translateType>) => {
   translateList.value = v;
 }
+/**
+ *  供其他组件获取当前组件翻译列表的值 hook
+ */
 const useTranslateList = () => {
   return {
     translateList,
     setTranslateList: updateTranslateList
   }
 }
+/**
+ * 原生dom初始化
+ */
 const initDom = (selector: any, negativeSelector: any) => {
   if (selector && negativeSelector) {
     promptCateGory.value = 'Forward';
@@ -254,6 +255,13 @@ const initDom = (selector: any, negativeSelector: any) => {
   Textarea.$useTranslateList = useTranslateList;
 };
 
+const getCurrentMonthAndDay = () => {
+  const date = new Date();
+  let month = date.getMonth()  + 1; //得到月份
+  let day = date.getDate(); //得到日期
+  return month + '月' + day + '日';
+}
+
 const saveSubmitRecord = (async = false) => {
   if (Textarea) {
     const size = getLocalStorageSize();
@@ -264,7 +272,7 @@ const saveSubmitRecord = (async = false) => {
       let preData = localStorage.getItem('iiooo_submit_record')
       const pre = preData ? JSON.parse(preData) : [];
       const res = {
-        id: pre.length,
+        id: pre.length + ':' + getCurrentMonthAndDay(),
         [promptCateGory.value]: translateList.value.slice(0)
       };
       if (async && NegativeTextarea) {
@@ -278,6 +286,7 @@ const saveSubmitRecord = (async = false) => {
     }
   }
 }
+
 const getLocalStorageSize = () => {
   let storage: any = ''
   if (!window.localStorage) {
@@ -300,7 +309,6 @@ const getLocalStorageSize = () => {
 const handleSubmitRecordChange = (v: number) => {
   const index = submitList.value.findIndex(s => s.id === v);
   if (index >= 0) {
-    translateStatus.value !== 'update' && (translateStatus.value = 'update');
     const newForwardValue = submitList.value[index].Forward || [];
     const newNegativeValue = submitList.value[index].Negative || [];
     translateList.value = promptCateGory.value === 'Forward' ? newForwardValue : newNegativeValue;
@@ -365,7 +373,7 @@ const handleActionClick = (methods: operateMethods, value: any) => {
 };
 
 const handleChangeKeywords = async(value: any) => {
-  const index = operateList.findIndex(o => o.title === '质量强化模板');
+  const index = operateList.findIndex(o => o.title === '质量词模板');
   if (index >= 0) {
     if (value === operateList[index].value) return;
     const preValue = operateList[index].value;
@@ -522,13 +530,13 @@ const reqTagManageKeyWordList =async () => {
       const index = operateList.findIndex(o => o.methods === 'selectkeyword');
       if (index >= 0) {
         operateList[index].options = [
-          {
-            name: '请选择质量词',
-            id: '质量词'
-          },
+          // {
+          //   name: '请选择质量词',
+          //   id: '质量词'
+          // },
           ...res.data
         ];
-        operateList[index].value = '质量词';
+        // operateList[index].value = '质量词';
       }
     }
   } catch (error) {

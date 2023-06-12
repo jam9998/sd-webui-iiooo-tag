@@ -8,7 +8,7 @@
     @dragover.prevent
     @dragstart="dragstart(listType, index)"
   >
-    <a-popover placement="top" v-model:visible="visible">
+    <a-popover overlayClassName="prompt-preview-popover" placement="top" v-model:visible="visible">
       <template #content>
         <div class="prompt-preview-popover">
           <div>
@@ -202,12 +202,12 @@ const handleUpdateWeight = (type: 'up' | 'dec', index: number) => {
   align-items: center;
   justify-content: space-between;
   box-sizing: border-box;
-  height: 2.625rem;
-  line-height: 1.875rem;
+  height: 2.125rem;
+  line-height: 1.375rem;
   padding: 0.375rem 0.75rem;
   cursor: move;
   .text {
-    font-size: 1rem;
+    font-size: 0.875rem;
     font-weight: 500;
     color: #fff;
     width: 100%;
@@ -241,11 +241,18 @@ const handleUpdateWeight = (type: 'up' | 'dec', index: number) => {
     margin-left: 0.65rem;
   }
 }
-:global(.ant-popover-inner) {
+:global(.prompt-preview-popover .ant-popover-inner) {
   background-color: #232323;
   border: 1px solid #3d3d3d;
 }
-:global(.ant-popover-arrow-content) {
+:global(.prompt-preview-popover .ant-popover-inner) {
+  background-color: #232323;
+  border: 1px solid #3d3d3d;
+}
+:global(.prompt-preview-popover .ant-popover-inner-content) {
+  padding: 10px 14px;
+}
+:global(.prompt-preview-popover .ant-popover-arrow-content) {
   background-color:#3d3d3d;
 }
 </style>

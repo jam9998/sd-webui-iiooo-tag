@@ -407,8 +407,10 @@ const handleChangeKeywords = async(value: any) => {
         NegativeTextarea.value = value + ((value[length - 1] === ',' || value[length - 1] === '，' || !value) ? '' : ',') + negCueWord;
       }
       if (Textarea && NegativeTextarea) {
-        let cur = Textarea.onkeyup('__custom');
-        let oth = NegativeTextarea.onkeyup('__custom');
+        let cur;
+        let oth;
+        posCueWord && (cur = Textarea.onkeyup('__custom'));
+        negCueWord && (oth = NegativeTextarea.onkeyup('__custom'));
         await cur;
         await oth;
         saveSubmitRecord(true);

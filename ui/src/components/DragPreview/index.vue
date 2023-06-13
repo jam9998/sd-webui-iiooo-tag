@@ -12,12 +12,13 @@
       <template #content>
         <div class="prompt-preview-popover">
           <div>
-            <a-button type="primary" size="small" @click="handleUpdateWeight('dec', index)">
-              <template #icon><MinusOutlined /></template>
-            </a-button>
-            <span class="weight">{{ preview.weight }}</span>
             <a-button type="primary" size="small"  @click="handleUpdateWeight('up', index)">
               <template #icon><PlusOutlined /></template>
+            </a-button>
+
+            <span class="weight">{{ preview.weight }}</span>
+            <a-button type="primary" size="small" @click="handleUpdateWeight('dec', index)">
+              <template #icon><MinusOutlined /></template>
             </a-button>
           </div>
           <div class="text"> 
